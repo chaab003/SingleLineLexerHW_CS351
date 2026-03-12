@@ -1,7 +1,11 @@
 from lexer import CutOneLineTokens
-
+from lexer import TinyPieGUI
+import tkinter as tk
 
 def main():
+    root = tk.Tk()
+    app = TinyPieGUI(root)
+    root.mainloop()
     program_string = """int A1=5
 float BBB2 =1034.2
 float cresult = A1 +BBB2 * BBB2

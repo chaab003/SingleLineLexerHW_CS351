@@ -1,6 +1,7 @@
 import re
 import tkinter as tk
 from tkinter import scrolledtext
+from parser import parser
 
 class TinyPieGUI:
     def __init__(self, root):
@@ -11,17 +12,22 @@ class TinyPieGUI:
         self.lines = []
 
         title = tk.Label(root, text="Lexical Analyzer for TinyPie", font=("Arial", 14))
-        title.grid(row=0, column=0, columnspan=3, pady=10)
+        title.grid(row=0, column=0, columnspan=5, pady=10)
 
         tk.Label(root, text="Source Code Input:").grid(row=1, column=0)
 
         tk.Label(root, text="Lexical Analyzed Result:").grid(row=1, column=2)
+
+        tk.Label(root, text="Parse Tree:").grid(row=1, column=4)
 
         self.input_box = scrolledtext.ScrolledText(root, width=40, height=10)
         self.input_box.grid(row=2, column=0, padx=10, pady=10)
 
         self.output_box = scrolledtext.ScrolledText(root, width=40, height=10)
         self.output_box.grid(row=2, column=2, padx=10, pady=10)
+
+        self.parse_box = scrolledtext.ScrolledText(root, width=40, height=10)
+        self.parse_box.grid(row=2, column=4, padx=10, pady=10)
 
         tk.Label(root, text="Current Processing Line:").grid(row=3, column=0, sticky="e")
 
@@ -43,10 +49,25 @@ class TinyPieGUI:
             text = self.input_box.get("1.0", tk.END)
             self.lines = text.splitlines()
 
+        # skip blank lines
+        while self.current_line < len(self.lines) and not self.lines[self.current_line].strip():
+            self.current_line += 1
+
         if self.current_line < len(self.lines):
             line = self.lines[self.current_line]
+            line_num = self.current_line + 1
 
-            self.output_box.insert(tk.END, line + "\n")
+            # run lexer on this line
+            tokens = CutOneLineTokens(line)
+            self.output_box.insert(tk.END, f"---- Line {line_num} ----\n")
+            for tok in tokens:
+                self.output_box.insert(tk.END, tok + "\n")
+            self.output_box.insert(tk.END, "\n")
+
+            # run parser and show parse tree
+            tree_output = parser(tokens, line_num)
+            self.parse_box.insert(tk.END, f"####Parse tree for line {line_num}####\n")
+            self.parse_box.insert(tk.END, tree_output + "\n\n")
 
             self.current_line += 1
             self.line_var.set(str(self.current_line))
@@ -55,6 +76,8 @@ class TinyPieGUI:
         self.input_box.delete("1.0", tk.END)
 
         self.output_box.delete("1.0", tk.END)
+
+        self.parse_box.delete("1.0", tk.END)
 
         self.lines = []
 
@@ -97,23 +120,8 @@ def CutOneLineTokens(program_code):
             if match:
                 token_value = match.group(0)
 
-                # Output <type, token> list
-                if token_type == "keyword":
-                    tokens.append(f"<key,{token_value}>")
-                elif token_type == "identifier":
-                    tokens.append(f"<id,{token_value}>")
-                elif token_type == "operator":
-                    tokens.append(f"<op,{token_value}>")
-                elif token_type == "string_literal":
-                    tokens.append(f"<string_literal,{token_value}>")
-                elif token_type == "float_literal":
-                    tokens.append(f"<float_literal,{token_value}>")
-                elif token_type == "int_literal":
-                    tokens.append(f"<int_literal,{token_value}>")
-                else:
-                    tokens.append(f"<separator,{token_value}>")
+                tokens.append(f"<{token_type},{token_value}>")
 
-                # Cuts first token from LOC
                 line_to_cut = line_to_cut[len(token_value) :]
 
                 matched = True
